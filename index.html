@@ -1,213 +1,613 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en" class="dark">
-
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>I-AM Decentralized Systems • Sovereign Runtime</title>
-    <meta name="description" content="I-AM Decentralized Systems: A sovereign, local-first, content-addressed runtime for decentralized systems. Your identity, memory, and intelligence live entirely on your device.">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://cdn.tailwindcss.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com; connect-src http://127.0.0.1:5001 http://127.0.0.1:8080 http://localhost:11434 https://*.ipfs.network.storage https://ipfs.io https://huggingface.co https://*.huggingface.co; font-src https://fonts.gstatic.com; img-src data: http: https: blob:; frame-src 'self' blob:; object-src 'none'; worker-src 'self' blob:;">
+    <title>I-AM • Sovereign Intelligence Network</title>
+    
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    
+    <!-- Main styles -->
+    <link rel="stylesheet" href="styles/main.css">
+    
+    <!-- Polyfills for older browsers -->
+    <script src="https://cdn.jsdelivr.net/npm/promise-polyfill@8/dist/polyfill.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/whatwg-fetch@3.6.2/dist/fetch.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/text-encoding@0.7.0/lib/encoding.min.js"></script>
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    
+    <!-- JSZip for deployment -->
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    
+    <!-- Helia (IPFS) -->
+    <script src="https://cdn.jsdelivr.net/npm/helia@4/dist/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@helia/unixfs@3/dist/index.min.js"></script>
+    <script>
+        window.heliaModules = {
+            createHelia: window.Helia?.createHelia,
+            unixfs: window.HeliaUnixfs?.unixfs
+        };
+    </script>
+    
+    <!-- Transformers.js for browser-based AI -->
+    <script type="module">
+        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
+        env.allowLocalModels = false;
+        env.allowRemoteModels = true;
+        window.transformersReady = pipeline('text-generation', 'Xenova/gpt2', {
+            progress_callback: (data) => {
+                if (data.status === 'progress') {
+                    console.log(`Model loading: ${data.progress?.toFixed(0) || 0}%`);
+                }
+            }
+        });
+    </script>
+    
+    <!-- Tailwind Config -->
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
-                        bg: '#05060a',
-                        panel: '#0b0f1a',
-                        cyan: '#3fffdc',
-                        magenta: '#ff3fd4'
-                    },
-                    boxShadow: {
-                        glow: '0 0 30px rgba(63,255,220,.35)',
-                        glowMagenta: '0 0 30px rgba(255,63,212,.35)'
+                        bg: '#050810',
+                        bgLight: '#0a0e17',
+                        panel: '#12161f',
+                        panelHover: '#1a1f2a',
+                        neonBlue: '#00d4ff',
+                        neonBlueDark: '#0099cc',
+                        neonGreen: '#00ff88',
+                        neonGreenDark: '#00cc66',
+                        neonOrange: '#ff9500',
+                        neonOrangeDark: '#cc7700',
+                        neonYellow: '#ffd500',
+                        neonYellowDark: '#ccaa00',
+                        textPrimary: '#f0f4f8',
+                        textSecondary: '#9ca3af'
                     }
                 }
             }
         }
     </script>
-    <style>
-        html, body {
-            height: 100%;
-            background: #05060a;
-            color: #e5e7eb;
-            font-family: Inter, system-ui, sans-serif
-        }
-        canvas {
-            position: fixed;
-            inset: 0;
-            z-index: -1
-        }
-        ::-webkit-scrollbar {
-            width: 8px
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #1f2937;
-            border-radius: 4px
-        }
-        a.iam-link {
-            @apply text-cyan underline cursor-pointer;
-        }
-        .view {
-            @apply space-y-8;
-        }
-    </style>
 </head>
 
 <body class="dark min-h-screen flex flex-col">
-    <canvas id="starfield"></canvas>
+    <!-- Starfield background -->
+    <canvas id="starfield" aria-hidden="true"></canvas>
+    
+    <!-- Toast container -->
+    <div id="toastContainer" aria-live="polite" aria-atomic="true"></div>
 
-    <header class="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-panel/70 backdrop-blur-sm sticky top-0 z-10">
+    <!-- Header -->
+    <header class="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-panel/70 backdrop-blur-sm sticky top-0 z-10" role="banner">
         <div class="flex items-center gap-3">
-            <div class="w-3 h-3 rounded-full bg-cyan shadow-glow" id="statusDot"></div>
+            <div class="relative">
+                <div class="w-3 h-3 rounded-full bg-neonGreen shadow-glowGreen status-dot" id="statusDot" aria-label="System status: Active"></div>
+            </div>
             <div>
-                <h1 id="title" class="font-extrabold tracking-wide text-cyan text-2xl">I-AM Decentralized Systems</h1>
-                <p class="text-xs text-white/60 -mt-1">sovereign runtime • content-addressed • local-first • decentralized</p>
+                <h1 class="font-extrabold tracking-wide text-2xl gradient-text">I-AM</h1>
+                <p class="text-xs text-textSecondary -mt-1 mono">sovereign intelligence • unified runtime</p>
             </div>
         </div>
-        <div class="flex items-center gap-5 text-sm">
-            <span id="tokenBalance" class="px-4 py-1.5 rounded bg-black/40 border border-white/10 font-mono">NXS: 0</span>
-            <button id="themeToggle" class="px-4 py-1.5 rounded bg-panel border border-white/10">MAGENTA</button>
+        <div class="flex items-center gap-4 text-sm flex-wrap">
+            <div id="aiStatus" class="badge bg-neonOrange/20 text-neonOrange border border-neonOrange/30 hidden" role="status" aria-live="polite">
+                <span class="spinner" style="width: 12px; height: 12px; border-width: 2px;"></span>
+                <span>AI Loading</span>
+            </div>
+            <div id="ipfsStatus" class="badge bg-neonBlue/20 text-neonBlue border border-neonBlue/30 hidden" role="status" aria-live="polite">
+                <span>IPFS: <span id="ipfsMode">Checking</span></span>
+            </div>
+            <span id="tokenBalance" class="px-4 py-1.5 rounded bg-bgLight border border-neonGreen/30 mono text-neonGreen hover:border-neonGreen/50 transition-all" role="status" aria-label="IAM tokens">IAM: 0</span>
         </div>
     </header>
 
-    <main class="flex-1 grid grid-cols-1 md:grid-cols-6">
-        <nav class="md:col-span-1 border-r border-white/10 p-4 space-y-1 bg-panel/50">
-            <button data-tab="dashboard" class="tab active w-full text-left px-4 py-3 rounded-lg bg-cyan text-black font-semibold">Presence</button>
-            <button data-tab="identity" class="tab w-full text-left px-4 py-3 rounded-lg bg-panel">Identity</button>
-            <button data-tab="chat" class="tab w-full text-left px-4 py-3 rounded-lg bg-panel">Intelligence</button>
-            <button data-tab="forge" class="tab w-full text-left px-4 py-3 rounded-lg bg-panel">Forge</button>
-            <button data-tab="resolver" class="tab w-full text-left px-4 py-3 rounded-lg bg-panel">Resolver</button>
-            <button data-tab="mounted" class="tab w-full text-left px-4 py-3 rounded-lg bg-panel">Mounted</button>
-            <button data-tab="deploy" class="tab w-full text-left px-4 py-3 rounded-lg bg-panel">Deploy</button>
+    <!-- Main Layout -->
+    <main class="flex-1 grid grid-cols-1 md:grid-cols-6" role="main">
+        <!-- Sidebar Navigation -->
+        <nav class="md:col-span-1 border-r border-white/10 p-4 space-y-1 bg-panel/50" role="navigation" aria-label="Main navigation">
+            <button data-tab="onboarding" class="tab active">
+                <span class="flex items-center gap-2">
+                    <span aria-hidden="true">👋</span>
+                    <span>Welcome</span>
+                </span>
+            </button>
+            <button data-tab="dashboard" class="tab">
+                <span class="flex items-center gap-2">
+                    <span aria-hidden="true">🏠</span>
+                    <span>Dashboard</span>
+                </span>
+            </button>
+            <button data-tab="identity" class="tab">
+                <span class="flex items-center gap-2">
+                    <span aria-hidden="true">🔐</span>
+                    <span>Identity</span>
+                </span>
+            </button>
+            <button data-tab="profile" class="tab">
+                <span class="flex items-center gap-2">
+                    <span aria-hidden="true">👤</span>
+                    <span>Profile</span>
+                </span>
+            </button>
+            <button data-tab="social" class="tab">
+                <span class="flex items-center gap-2">
+                    <span aria-hidden="true">🌐</span>
+                    <span>Social</span>
+                </span>
+            </button>
+            <button data-tab="chat" class="tab">
+                <span class="flex items-center gap-2">
+                    <span aria-hidden="true">🤖</span>
+                    <span>AI Chat</span>
+                </span>
+            </button>
+            <button data-tab="code" class="tab">
+                <span class="flex items-center gap-2">
+                    <span aria-hidden="true">💻</span>
+                    <span>Code Editor</span>
+                </span>
+            </button>
+            <button data-tab="files" class="tab">
+                <span class="flex items-center gap-2">
+                    <span aria-hidden="true">📁</span>
+                    <span>Files</span>
+                </span>
+            </button>
+            <button data-tab="memory" class="tab">
+                <span class="flex items-center gap-2">
+                    <span aria-hidden="true">🧠</span>
+                    <span>Memory</span>
+                </span>
+            </button>
+            <button data-tab="resolver" class="tab">
+                <span class="flex items-center gap-2">
+                    <span aria-hidden="true">🔍</span>
+                    <span>Resolver</span>
+                </span>
+            </button>
+            <button data-tab="deploy" class="tab">
+                <span class="flex items-center gap-2">
+                    <span aria-hidden="true">🚀</span>
+                    <span>Deploy</span>
+                </span>
+            </button>
         </nav>
 
+        <!-- Content Area -->
         <section class="md:col-span-5 p-6 md:p-8 overflow-y-auto">
 
-            <div id="view-dashboard" class="view">
-                <div class="p-6 rounded-xl bg-panel border border-white/10">
-                    <p class="text-white/80 leading-relaxed">
-                        I-AM Decentralized Systems is a sovereign, local-first, cryptographically irreversible runtime for decentralized systems.<br>
-                        It is not an application — it is becoming part of your decentralized presence.
-                    </p>
-                    <p class="mt-6 text-sm text-white/60">
-                        Navigate via: <a href="iam://placeholder/" class="iam-link">iam://your-did/</a> •
-                        <a href="iam://placeholder/memory" class="iam-link">/memory</a> •
-                        <a href="iam://placeholder/identity" class="iam-link">/identity</a>
-                    </p>
-                    <div class="mt-8 p-6 rounded-xl bg-black/40 border border-white/10 text-sm">
-                        <h3 class="font-bold text-cyan mb-4">Dual License Notice</h3>
-                        <p class="text-white/80">This runtime is offered under a dual-license model: free for non-commercial research and personal use; commercial use requires a separate license from James Brian Chapman.</p>
-                    </div>
-                </div>
-
-                <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="p-6 rounded-xl bg-panel border border-white/10">
-                        <h2 class="font-semibold text-white/60 mb-2">System State</h2>
-                        <div id="statusText" class="text-2xl text-cyan font-bold">Seed</div>
-                    </div>
-                    <div class="p-6 rounded-xl bg-panel border border-white/10">
-                        <h2 class="font-semibold text-white/60 mb-2">Sovereign DID</h2>
-                        <div id="didDisplay" class="text-sm break-all font-mono text-white/80"></div>
-                    </div>
-                    <div class="p-6 rounded-xl bg-panel border border-white/10">
-                        <h2 class="font-semibold text-white/60 mb-2">Memory Depth</h2>
-                        <div id="chainHeight" class="text-4xl font-bold text-magenta">0</div>
+            <!-- Onboarding View -->
+            <div id="view-onboarding" class="space-y-8 animate-fade-in">
+                <div class="max-w-4xl mx-auto space-y-8">
+                    <h2 class="text-5xl font-bold text-center gradient-text animate-slide-up">Welcome to I-AM</h2>
+                    <div class="card space-y-6 text-lg leading-relaxed animate-slide-up" style="animation-delay: 0.1s;">
+                        <div class="flex items-start gap-4">
+                            <span class="text-4xl" aria-hidden="true">🔐</span>
+                            <div>
+                                <h3 class="text-xl font-semibold text-neonBlue mb-2">Sovereign Identity</h3>
+                                <p class="text-textSecondary">Your identity is yours alone. Generated locally using Ed25519 cryptography, it never leaves your device without your explicit action.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start gap-4">
+                            <span class="text-4xl" aria-hidden="true">⛓️</span>
+                            <div>
+                                <h3 class="text-xl font-semibold text-neonGreen mb-2">Cryptographic Chain</h3>
+                                <p class="text-textSecondary">Every action is signed and recorded in an immutable chain, creating verifiable presence and history.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start gap-4">
+                            <span class="text-4xl" aria-hidden="true">🤖</span>
+                            <div>
+                                <h3 class="text-xl font-semibold text-neonOrange mb-2">Local Intelligence</h3>
+                                <p class="text-textSecondary">AI runs entirely on your device via Ollama or browser-based Transformers.js. Your conversations stay private.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start gap-4">
+                            <span class="text-4xl" aria-hidden="true">🌐</span>
+                            <div>
+                                <h3 class="text-xl font-semibold text-neonYellow mb-2">P2P Network</h3>
+                                <p class="text-textSecondary">Connect directly with peers via libp2p. Share content through IPFS. No central servers required.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="border-t border-white/10 pt-6">
+                            <p class="font-semibold text-center text-xl gradient-text">Everything is private by default. You control every byte.</p>
+                        </div>
+                        
+                        <div class="flex justify-center pt-4">
+                            <button id="startBtn" class="btn-primary text-xl px-12 py-4" aria-label="Begin your journey with I-AM">
+                                <span class="flex items-center gap-3">
+                                    <span>Begin Your Journey</span>
+                                    <span aria-hidden="true">→</span>
+                                </span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div id="view-identity" class="view hidden">
-                <h2 class="text-3xl font-bold mb-6">Sovereign Identity</h2>
-                <div class="p-8 rounded-xl bg-panel border border-white/10 space-y-8">
-                    <p class="text-white/70">Ed25519 keypair generated and stored locally. Never leaves device.</p>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Dashboard View -->
+            <div id="view-dashboard" class="space-y-8 animate-fade-in hidden">
+                <h2 class="text-4xl font-bold gradient-text">Dashboard</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="card hover:border-neonBlue/50 group">
+                        <h3 class="font-semibold text-textSecondary mb-2 flex items-center gap-2">
+                            <span aria-hidden="true">⚡</span>
+                            <span>System State</span>
+                        </h3>
+                        <div id="statusText" class="text-3xl text-neonBlue font-bold group-hover:scale-110 transition-transform">Active</div>
+                        <div class="mt-2 text-xs text-textSecondary">Runtime operational</div>
+                    </div>
+                    
+                    <div class="card hover:border-neonGreen/50 group">
+                        <h3 class="font-semibold text-textSecondary mb-2 flex items-center gap-2">
+                            <span aria-hidden="true">🆔</span>
+                            <span>DID</span>
+                        </h3>
+                        <div id="didDisplay" class="text-sm break-all mono text-textPrimary group-hover:text-neonBlue transition-colors"></div>
+                        <div class="mt-2 text-xs text-textSecondary">Decentralized ID</div>
+                    </div>
+                    
+                    <div class="card hover:border-neonOrange/50 group">
+                        <h3 class="font-semibold text-textSecondary mb-2 flex items-center gap-2">
+                            <span aria-hidden="true">📊</span>
+                            <span>Chain Height</span>
+                        </h3>
+                        <div id="chainHeight" class="text-5xl font-bold text-neonOrange group-hover:scale-110 transition-transform">0</div>
+                        <div class="mt-2 text-xs text-textSecondary">Signed events</div>
+                    </div>
+                    
+                    <div class="card hover:border-neonYellow/50 group">
+                        <h3 class="font-semibold text-textSecondary mb-2 flex items-center gap-2">
+                            <span aria-hidden="true">💎</span>
+                            <span>IAM Tokens</span>
+                        </h3>
+                        <div id="tokenCount" class="text-5xl font-bold text-neonYellow group-hover:scale-110 transition-transform">0</div>
+                        <div class="mt-2 text-xs text-textSecondary">Total earned</div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h2 class="text-xl font-bold text-textPrimary mb-4">Activity Statistics</h2>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="bg-bgLight p-4 rounded-lg">
+                            <div class="text-sm text-textSecondary">Total Events</div>
+                            <div id="totalActions" class="text-2xl font-bold text-neonBlue">0</div>
+                        </div>
+                        <div class="bg-bgLight p-4 rounded-lg">
+                            <div class="text-sm text-textSecondary">Posts</div>
+                            <div id="postCount" class="text-2xl font-bold text-neonGreen">0</div>
+                        </div>
+                        <div class="bg-bgLight p-4 rounded-lg">
+                            <div class="text-sm text-textSecondary">Messages</div>
+                            <div id="messageCount" class="text-2xl font-bold text-neonOrange">0</div>
+                        </div>
+                        <div class="bg-bgLight p-4 rounded-lg">
+                            <div class="text-sm text-textSecondary">IAM Tokens</div>
+                            <div class="text-2xl font-bold text-neonYellow" id="tokenBalance2">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card bg-neonBlue/5 border-neonBlue/30">
+                    <h3 class="text-lg font-semibold text-neonBlue mb-2">🎮 Developer Mode</h3>
+                    <p class="text-textSecondary text-sm mb-3">Press <kbd class="px-2 py-1 bg-bgLight rounded mono text-xs">Ctrl+Shift+D</kbd> to open the developer panel for debugging and state inspection.</p>
+                </div>
+            </div>
+
+            <!-- Identity View -->
+            <div id="view-identity" class="space-y-8 animate-fade-in hidden">
+                <h2 class="text-4xl font-bold gradient-text">Sovereign Identity</h2>
+                <div class="card space-y-8">
+                    <div class="flex items-start gap-4 p-4 bg-neonBlue/5 rounded-lg border border-neonBlue/20">
+                        <span class="text-3xl" aria-hidden="true">ℹ️</span>
                         <div>
-                            <div class="text-sm text-white/60 mb-1">DID</div>
-                            <div id="identityDid" class="text-sm break-all font-mono bg-black/40 p-3 rounded"></div>
+                            <h3 class="font-semibold text-neonBlue mb-1">Ed25519 Cryptography</h3>
+                            <p class="text-textSecondary text-sm">Your keypair is generated using Ed25519 elliptic curve cryptography and stored encrypted. Private keys never leave your device unencrypted.</p>
                         </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 gap-8">
+                        <div class="bg-bgLight p-6 rounded-lg border border-white/10">
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-xl" aria-hidden="true">🆔</span>
+                                <div class="text-sm font-semibold text-textSecondary">Decentralized Identifier (DID)</div>
+                            </div>
+                            <div id="identityDid" class="text-sm break-all mono bg-bg p-4 rounded border border-neonBlue/20 text-neonBlue"></div>
+                        </div>
+                        
+                        <div class="bg-bgLight p-6 rounded-lg border border-white/10">
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-xl" aria-hidden="true">🔑</span>
+                                <div class="text-sm font-semibold text-textSecondary">Public Key (hex)</div>
+                            </div>
+                            <div id="identityPub" class="text-xs break-all mono bg-bg p-4 rounded border border-neonGreen/20 text-neonGreen"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="border-t border-white/10 pt-6">
+                        <h3 class="text-lg font-semibold mb-4 text-textPrimary">Identity Management</h3>
+                        <div class="flex flex-wrap gap-4">
+                            <button id="exportIdentity" class="btn-primary">
+                                <span class="flex items-center gap-2">
+                                    <span aria-hidden="true">💾</span>
+                                    <span>Export State</span>
+                                </span>
+                            </button>
+                            <button id="importIdentity" class="btn-secondary">
+                                <span class="flex items-center gap-2">
+                                    <span aria-hidden="true">📥</span>
+                                    <span>Import State</span>
+                                </span>
+                            </button>
+                            <button id="verifyChainBtn" class="btn-secondary">
+                                <span class="flex items-center gap-2">
+                                    <span aria-hidden="true">✓</span>
+                                    <span>Verify Chain</span>
+                                </span>
+                            </button>
+                            <button id="clearAll" class="btn-warning ml-auto">
+                                <span class="flex items-center gap-2">
+                                    <span aria-hidden="true">⚠️</span>
+                                    <span>Wipe Everything</span>
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile View -->
+            <div id="view-profile" class="space-y-8 animate-fade-in hidden">
+                <h2 class="text-4xl font-bold gradient-text">Profile</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="card">
+                        <div class="flex flex-col items-center">
+                            <div id="profileAvatarDisplay" class="profile-avatar mb-4">?</div>
+                            <button id="btnUploadAvatar" class="btn-secondary text-sm mb-2">Upload Avatar</button>
+                            <input type="file" id="avatarFileInput" accept="image/*" class="hidden" aria-label="Upload avatar image">
+                            <p class="text-xs text-textSecondary text-center">Avatar stored on IPFS</p>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-2 card">
+                        <h3 class="text-xl font-semibold mb-4 text-neonBlue">Profile Information</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label for="profileDisplayName" class="text-sm text-textSecondary block mb-2">Display Name</label>
+                                <input id="profileDisplayName" type="text" placeholder="Your name" class="input-field w-full">
+                            </div>
+                            <div>
+                                <label for="profileBio" class="text-sm text-textSecondary block mb-2">Bio</label>
+                                <textarea id="profileBio" placeholder="Tell us about yourself..." class="input-field w-full h-24 resize-none"></textarea>
+                            </div>
+                            <div>
+                                <label for="profileWebsite" class="text-sm text-textSecondary block mb-2">Website</label>
+                                <input id="profileWebsite" type="url" placeholder="https://..." class="input-field w-full">
+                            </div>
+                            <button id="btnSaveProfile" class="btn-success w-full">Save Profile</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3 class="text-xl font-semibold mb-4 text-neonGreen">Statistics</h3>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="text-center">
+                            <p id="profilePostsCount" class="text-3xl font-bold text-neonBlue">0</p>
+                            <p class="text-sm text-textSecondary">Posts</p>
+                        </div>
+                        <div class="text-center">
+                            <p id="profileFollowingCount" class="text-3xl font-bold text-neonGreen">0</p>
+                            <p class="text-sm text-textSecondary">Following</p>
+                        </div>
+                        <div class="text-center">
+                            <p id="profileFollowersCount" class="text-3xl font-bold text-neonOrange">0</p>
+                            <p class="text-sm text-textSecondary">Followers</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Social View -->
+            <div id="view-social" class="space-y-8 animate-fade-in hidden">
+                <h2 class="text-4xl font-bold gradient-text">Social Network</h2>
+                <div class="card">
+                    <h3 class="text-xl font-semibold mb-4 text-neonBlue">Create Post</h3>
+                    <textarea id="postContent" placeholder="What's on your mind?" class="input-field w-full h-24 mb-4 resize-none" aria-label="Post content"></textarea>
+                    <div class="flex items-center justify-between">
+                        <span class="text-textSecondary text-sm">Posts are cryptographically signed and distributed P2P</span>
+                        <button id="btnPublishPost" class="btn-primary">Publish</button>
+                    </div>
+                </div>
+                <div id="socialFeed" class="space-y-4"></div>
+            </div>
+
+            <!-- AI Chat View -->
+            <div id="view-chat" class="space-y-8 animate-fade-in hidden flex flex-col" style="height: calc(100vh - 200px);">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-4xl font-bold gradient-text">AI Intelligence</h2>
+                    <div id="aiModeIndicator" class="badge bg-neonBlue/20 text-neonBlue border border-neonBlue/30" role="status">
+                        <span id="aiModeName">Detecting...</span>
+                    </div>
+                </div>
+                
+                <div id="chatLog" class="flex-1 overflow-y-auto space-y-4 p-6 rounded-xl bg-panel border border-white/10 mb-4" role="log" aria-label="Chat messages"></div>
+                
+                <div class="flex gap-3">
+                    <input id="chatInput" class="flex-1 input-field" placeholder="Ask anything... Your data stays local." aria-label="Chat message input">
+                    <button id="sendChat" class="btn-primary">
+                        <span class="flex items-center gap-2">
+                            <span>Send</span>
+                            <span aria-hidden="true">→</span>
+                        </span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Code Editor View -->
+            <div id="view-code" class="space-y-8 animate-fade-in hidden">
+                <h2 class="text-4xl font-bold gradient-text">Code Editor</h2>
+                <div class="card">
+                    <h3 class="text-xl font-semibold mb-4 text-neonBlue">Create Repository</h3>
+                    <input id="repoName" type="text" placeholder="Repository name" class="input-field w-full mb-4" aria-label="Repository name">
+                    <textarea id="repoDescription" placeholder="Repository description..." class="input-field w-full h-20 resize-none mb-4" aria-label="Repository description"></textarea>
+                    <button id="btnCreateRepo" class="btn-primary">Create Repository</button>
+                </div>
+                
+                <div id="repositoriesList" class="space-y-4"></div>
+                
+                <div class="card h-96" id="codeEditorContainer"></div>
+            </div>
+
+            <!-- Files View -->
+            <div id="view-files" class="space-y-8 animate-fade-in hidden">
+                <h2 class="text-4xl font-bold gradient-text">File Manager</h2>
+                <div class="card">
+                    <div class="flex items-center gap-4 mb-4">
+                        <input id="fileInput" type="file" multiple class="hidden" aria-label="Select files to upload">
+                        <button id="btnUploadFile" class="btn-primary">
+                            <span class="flex items-center gap-2">
+                                <span aria-hidden="true">📤</span>
+                                <span>Upload Files</span>
+                            </span>
+                        </button>
+                        <span class="text-textSecondary text-sm">Files stored on IPFS</span>
+                    </div>
+                    <div id="filesList" class="space-y-2 max-h-96 overflow-y-auto"></div>
+                </div>
+            </div>
+
+            <!-- Memory View -->
+            <div id="view-memory" class="space-y-8 animate-fade-in hidden">
+                <h2 class="text-4xl font-bold gradient-text">Memory System</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="card border-neonBlue/30">
+                        <h3 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-neonBlue" aria-hidden="true"></span>
+                            <span class="text-neonBlue">Episodic</span>
+                        </h3>
+                        <div id="episodicList" class="space-y-2 max-h-64 overflow-y-auto"></div>
+                    </div>
+                    <div class="card border-neonGreen/30">
+                        <h3 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-neonGreen" aria-hidden="true"></span>
+                            <span class="text-neonGreen">Semantic</span>
+                        </h3>
+                        <div id="semanticList" class="space-y-2 max-h-64 overflow-y-auto"></div>
+                    </div>
+                    <div class="card border-neonOrange/30">
+                        <h3 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-neonOrange" aria-hidden="true"></span>
+                            <span class="text-neonOrange">PDA</span>
+                        </h3>
+                        <div id="pdaList" class="space-y-2 max-h-64 overflow-y-auto"></div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3 class="text-xl font-semibold mb-4 text-neonYellow">Store Memory</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <input id="memoryContent" type="text" placeholder="Memory content..." class="input-field md:col-span-2" aria-label="Memory content">
+                        <select id="memoryType" class="input-field" aria-label="Memory type">
+                            <option value="episodic">Episodic</option>
+                            <option value="semantic">Semantic</option>
+                            <option value="pda">PDA</option>
+                        </select>
+                        <button id="btnAddMemory" class="btn-primary">Store</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resolver View -->
+            <div id="view-resolver" class="space-y-8 animate-fade-in hidden">
+                <h2 class="text-4xl font-bold gradient-text">Content Resolver</h2>
+                
+                <div class="card space-y-6">
+                    <div class="flex items-start gap-4 p-4 bg-neonBlue/5 rounded-lg border border-neonBlue/20">
+                        <span class="text-3xl" aria-hidden="true">📡</span>
                         <div>
-                            <div class="text-sm text-white/60 mb-1">Public Key (hex)</div>
-                            <div id="identityPub" class="text-xs break-all font-mono bg-black/40 p-3 rounded"></div>
+                            <h3 class="font-semibold text-neonBlue mb-1">IPFS/IPNS Resolution</h3>
+                            <p class="text-textSecondary text-sm">Enter an ipfs:// or ipns:// address to resolve content. The system will try local Kubo first, then browser-based Helia, and finally public gateways.</p>
                         </div>
                     </div>
-                    <div class="flex flex-wrap gap-4">
-                        <button id="exportIdentity" class="px-6 py-3 rounded-lg bg-cyan text-black font-semibold">Export State</button>
-                        <button id="clearAll" class="px-6 py-3 rounded-lg bg-red-700 hover:bg-red-600 text-white font-semibold">Wipe Everything</button>
-                    </div>
-                </div>
-            </div>
-
-            <div id="view-chat" class="view hidden flex flex-col h-full">
-                <div id="chatLog" class="flex-1 overflow-y-auto space-y-5 p-6 rounded-xl bg-panel border border-white/10"></div>
-                <div class="flex gap-3 mt-5">
-                    <input id="chatInput" class="flex-1 px-5 py-3 rounded-lg bg-black border border-white/10 focus:outline-none focus:border-cyan" placeholder="Communicate with local intelligence…">
-                    <button id="sendChat" class="px-8 py-3 rounded-lg bg-cyan text-black font-semibold">Send</button>
-                </div>
-            </div>
-
-            <div id="view-forge" class="view hidden space-y-8">
-                <h2 class="text-3xl font-bold">Sovereign Forge</h2>
-                <div class="p-6 rounded-xl bg-panel border border-white/10 space-y-6">
-                    <p class="text-white/70 text-sm">You and local intelligence compete to evolve the runtime. Superior proposal wins NXS.</p>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div class="p-4 rounded-lg bg-black/50 border border-white/10">
-                            <div class="text-xs text-white/60">Your Wins</div>
-                            <div id="forgeUserWins" class="text-2xl font-bold text-cyan">0</div>
-                        </div>
-                        <div class="p-4 rounded-lg bg-black/50 border border-white/10">
-                            <div class="text-xs text-white/60">AI Wins</div>
-                            <div id="forgeAIWins" class="text-2xl font-bold text-magenta">0</div>
-                        </div>
-                        <div class="p-4 rounded-lg bg-black/50 border border-white/10">
-                            <div class="text-xs text-white/60">Round</div>
-                            <div id="forgeRound" class="text-2xl font-bold text-white">1</div>
-                        </div>
-                    </div>
+                    
                     <div class="flex gap-3">
-                        <textarea id="forgeInput" rows="7" class="flex-1 px-5 py-4 rounded-lg bg-black border border-white/10 focus:outline-none focus:border-cyan font-mono text-sm" placeholder="Propose complete <script> enhancement or new runtime feature..."></textarea>
-                        <button id="forgeSubmit" class="px-8 py-4 rounded-lg bg-cyan text-black font-semibold self-start">Forge</button>
+                        <input id="resolveInput" class="flex-1 input-field mono" placeholder="ipfs://Qm... or ipns://k51qzi..." aria-label="IPFS or IPNS address">
+                        <button id="resolveBtn" class="btn-primary">
+                            <span class="flex items-center gap-2">
+                                <span aria-hidden="true">🔍</span>
+                                <span>Resolve</span>
+                            </span>
+                        </button>
                     </div>
-                    <div id="forgeStatus" class="text-sm font-mono text-center min-h-[1.5rem]"></div>
-                    <div id="forgeLog" class="max-h-96 overflow-y-auto space-y-4 p-5 rounded-lg bg-black/60 border border-white/10 text-xs font-mono"></div>
-                </div>
-            </div>
-
-            <div id="view-resolver" class="view hidden space-y-8">
-                <h2 class="text-3xl font-bold">Content Resolver</h2>
-                <div class="p-8 rounded-xl bg-panel border border-white/10 space-y-6">
-                    <p class="text-white/80">Enter iam:// (self only) or ipfs:// address to resolve and view content via public gateway.</p>
-                    <div class="flex gap-3">
-                        <input id="resolveInput" class="flex-1 px-5 py-3 rounded-lg bg-black border border-white/10 focus:outline-none focus:border-cyan font-mono" placeholder="iam://did:key:.../app   or   ipfs://Qm...">
-                        <button id="resolveBtn" class="px-8 py-3 rounded-lg bg-cyan text-black font-semibold">Resolve & View</button>
+                    
+                    <div id="resolveResult" class="p-6 rounded-lg bg-bgLight border border-white/10 min-h-[12rem] overflow-auto" role="region" aria-live="polite">
+                        <div class="text-center text-textSecondary">
+                            <span class="text-3xl block mb-2" aria-hidden="true">🔍</span>
+                            <p>Results will appear here</p>
+                        </div>
                     </div>
-                    <div id="resolveResult" class="p-5 rounded-lg bg-black/60 border border-white/10 min-h-[8rem] font-mono text-sm whitespace-pre-wrap overflow-x-auto"></div>
                 </div>
             </div>
 
-            <div id="view-mounted" class="view hidden space-y-8">
-                <h2 class="text-3xl font-bold">Mounted Content</h2>
-                <div class="p-6 rounded-xl bg-panel border border-white/10 text-white/70">
-                    <p>Foreign DID mounting not yet implemented. Self-references and IPFS gateway viewing available in Resolver.</p>
-                </div>
-                <div id="mountedList" class="space-y-4"></div>
-            </div>
-
-            <div id="view-deploy" class="view hidden space-y-8">
-                <h2 class="text-3xl font-bold">Deploy to IPFS</h2>
-                <div class="p-8 rounded-xl bg-panel border border-white/10 space-y-8">
-                    <p class="text-white/70">Bundle current runtime state + manifest and license, then pin locally (requires Kubo) or export for manual upload.</p>
+            <!-- Deploy View -->
+            <div id="view-deploy" class="space-y-8 animate-fade-in hidden">
+                <h2 class="text-4xl font-bold gradient-text">Deploy to IPFS</h2>
+                
+                <div class="card space-y-8">
+                    <div class="flex items-start gap-4 p-4 bg-neonGreen/5 rounded-lg border border-neonGreen/20">
+                        <span class="text-3xl" aria-hidden="true">📦</span>
+                        <div>
+                            <h3 class="font-semibold text-neonGreen mb-1">Bundle & Pin</h3>
+                            <p class="text-textSecondary text-sm">Bundle your entire runtime state and manifest, then pin to IPFS for permanent, decentralized storage.</p>
+                        </div>
+                    </div>
+                    
                     <div class="space-y-3">
-                        <div class="text-sm text-white/60">Current IPFS CID (when pinned)</div>
-                        <div id="appCid" class="text-sm break-all font-mono bg-black/50 p-4 rounded-lg">not pinned yet</div>
+                        <div class="text-sm font-semibold text-textSecondary flex items-center gap-2">
+                            <span aria-hidden="true">🔗</span>
+                            <span>Current IPFS CID</span>
+                        </div>
+                        <div id="appCid" class="text-sm break-all mono bg-bgLight p-4 rounded-lg border border-white/10" role="status">
+                            <span class="text-textSecondary">Not pinned yet - click "Pin Current State" to deploy</span>
+                        </div>
                     </div>
+                    
                     <div class="flex flex-wrap gap-4">
-                        <button id="pinToIPFS" class="px-6 py-3 rounded-lg bg-cyan text-black font-semibold">Pin Current State (local Kubo)</button>
-                        <button id="exportForDeploy" class="px-6 py-3 rounded-lg bg-magenta text-black font-semibold">Export ZIP</button>
+                        <button id="pinToIPFS" class="btn-success">
+                            <span class="flex items-center gap-2">
+                                <span aria-hidden="true">📌</span>
+                                <span>Pin Current State</span>
+                            </span>
+                        </button>
+                        <button id="exportForDeploy" class="btn-secondary">
+                            <span class="flex items-center gap-2">
+                                <span aria-hidden="true">💾</span>
+                                <span>Export ZIP</span>
+                            </span>
+                        </button>
+                    </div>
+                    
+                    <div class="border-t border-white/10 pt-6">
+                        <h3 class="text-lg font-semibold mb-4 text-textPrimary">Deployment Info</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-bgLight p-4 rounded-lg">
+                                <div class="text-sm text-textSecondary mb-1">State Size</div>
+                                <div id="stateSize" class="text-lg font-bold text-neonBlue">~</div>
+                            </div>
+                            <div class="bg-bgLight p-4 rounded-lg">
+                                <div class="text-sm text-textSecondary mb-1">Chain Events</div>
+                                <div id="chainEvents" class="text-lg font-bold text-neonGreen">0</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -215,552 +615,7 @@
         </section>
     </main>
 
-    <script>
-        if (!crypto?.subtle || !isSecureContext) {
-            document.body.innerHTML = '<div class="flex items-center justify-center h-screen text-2xl text-red-500">Secure context (https or localhost) required</div>';
-            throw 0;
-        }
-
-        const enc = new TextEncoder();
-        const BASE58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-        const ED_PREFIX = new Uint8Array([0xed, 0x01]);
-
-        const Crypto = {
-            hex: b => [...b].map(x => x.toString(16).padStart(2, '0')).join(''),
-            bytes: h => Uint8Array.from(h.match(/.{2}/g).map(b => parseInt(b, 16))),
-            b58(b) {
-                let n = BigInt('0x' + this.hex(b)), o = '';
-                while (n > 0n) {
-                    let r = n % 58n;
-                    n /= 58n;
-                    o = BASE58[Number(r)] + o;
-                }
-                for (let i = 0; b[i] === 0; i++) o = '1' + o;
-                return 'z' + (o || '1');
-            },
-            async sha(d) {
-                const bytes = typeof d === 'string' ? enc.encode(d) : d;
-                return this.hex(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)));
-            }
-        };
-
-        const MANIFEST = {
-            name: "I-AM Decentralized Systems Sovereign Runtime",
-            description: "A local-first, content-addressed personal runtime for decentralized systems. Your sovereign identity, memory, and intelligence live entirely on your device.",
-            version: "0.4.0",
-            author: "James Brian Chapman",
-            license: "Dual License: Non-Commercial (free for research/personal) / Commercial (contact for license)",
-            contact: "cbbjbc218@gmail.com",
-            requirements: "Ollama (for local intelligence) + optional Kubo IPFS node for pinning",
-            entry: "index.html",
-            vision: "Persistent, evolving, fully decentralized sovereign presence."
-        };
-
-        const LICENSE_TEXT = `# Dual License Agreement
-
-## Deterministic Controlled eXecution (DCX)  
-Including Reference Implementation: I-AM Decentralized Systems Sovereign Runtime
-
-Copyright © 2026 James Brian Chapman  
-All rights reserved.
-
----
-
-## Overview
-
-This project is offered under a **dual-license model**:
-
-1. **Non-Commercial License** for research, evaluation, and personal use  
-2. **Commercial License** required for any revenue-generating or operational use
-
-You must comply with **one** of the licenses below.
-
----
-
-## 1. Non-Commercial License (NC-DCX-1.0)
-
-### 1.1 Grant of Rights
-
-Permission is hereby granted, free of charge, to any individual or organization to use, copy, modify, and distribute this software and associated documentation **solely for non-commercial purposes**, including:
-
-- Research
-- Academic use
-- Personal experimentation
-- Evaluation and benchmarking
-- Non-profit internal testing
-
-### 1.2 Restrictions
-
-You **may not**:
-
-- Use this software in any revenue-generating activity
-- Deploy this software in production systems
-- Offer this software as part of a paid service
-- Use this software internally to support commercial operations
-- Integrate this software into proprietary or commercial products
-- Resell, sublicense, or monetize this software in any form
-
-### 1.3 Attribution
-
-All copies and substantial portions of the software must include:
-
-- This license
-- Copyright notice
-- Author attribution
-
-### 1.4 No Warranty
-
-This software is provided **“AS IS”**, without warranty of any kind, express or implied, including but not limited to merchantability, fitness for a particular purpose, or noninfringement.
-
----
-
-## 2. Commercial License (Required for Monetized Use)
-
-### 2.1 Requirement
-
-A **Commercial License** is required for **any** of the following:
-
-- Paid services or products
-- Internal enterprise use that supports revenue
-- Data center deployment
-- Government or contractor deployment beyond evaluation
-- Cloud, SaaS, or hosted offerings
-- AI infrastructure, inference, or search services
-- Energy, compliance, security, or audit systems used operationally
-
-If money is involved **at any level**, a Commercial License is required.
-
-### 2.2 Commercial License Terms
-
-Commercial licenses are provided under **separate written agreement** and may include:
-
-- Production rights
-- Performance optimizations
-- GPU and accelerator backends
-- Enterprise support
-- Compliance and audit guarantees
-- SLA options
-
-### 2.3 Contact for Commercial Licensing
-
-To obtain a Commercial License, contact:
-
-**Licensing Authority:**  
-James Brian Chapman  
-
-**Email:**  
-cbbjbc218@gmail.com 
-
-Alternate contacts:  
-iconoclastdao@gmail.com  
-iamchainjc@gmail.com  
-
----
-
-## 3. Ownership
-
-All intellectual property rights, including but not limited to:
-
-- Execution model concepts
-- Scheduling architecture
-- Deterministic pulse mechanisms
-- Reference implementation design
-
-remain the exclusive property of **James Brian Chapman**.
-
-This license does **not** grant ownership.
-
----
-
-## 4. Contributions
-
-Unless otherwise agreed in writing:
-
-- Contributions are accepted **only for non-commercial code paths**
-- Contributors grant a perpetual, worldwide license to incorporate contributions
-- A Contributor License Agreement (CLA) may be required
-
----
-
-## 5. Enforcement
-
-Unauthorized commercial use constitutes **copyright infringement** and may result in:
-
-- License termination
-- Injunctive relief
-- Damages and legal action
-
----
-
-## 6. Governing Law
-
-This license shall be governed by and construed in accordance with the laws of the United States, without regard to conflict of law principles.
-
----
-
-## Summary (Non-Binding)
-
-- **Free to study and evaluate**
-- **Not free to monetize**
-- **Commercial use requires a license**
-- **No ambiguity**
-
----`;
-
-        const State = (() => {
-            let s = {
-                did: null,
-                pub: null,
-                priv: null,
-                chain: [],
-                tokens: 0,
-                messages: [],
-                policies: [],
-                forgeStats: {userWins: 0, aiWins: 0, round: 1},
-                mounted: {}
-            };
-            const save = () => localStorage.setItem('iam_state_v3', JSON.stringify(s));
-            const load = () => {
-                const raw = localStorage.getItem('iam_state_v3') || localStorage.getItem('iam_state_v2');
-                if (raw) Object.assign(s, JSON.parse(raw));
-            };
-            const genKey = async () => {
-                const k = await crypto.subtle.generateKey({name: 'Ed25519'}, true, ['sign', 'verify']);
-                const pub = new Uint8Array(await crypto.subtle.exportKey('raw', k.publicKey));
-                const priv = new Uint8Array(await crypto.subtle.exportKey('pkcs8', k.privateKey));
-                s.pub = Crypto.hex(pub);
-                s.priv = Crypto.hex(priv);
-                s.did = 'did:key:' + Crypto.b58(new Uint8Array([...ED_PREFIX, ...pub]));
-            };
-            const sign = async msg => {
-                const key = await crypto.subtle.importKey('pkcs8', Crypto.bytes(s.priv), {name: 'Ed25519'}, false, ['sign']);
-                return Crypto.hex(new Uint8Array(await crypto.subtle.sign('Ed25519', key, enc.encode(msg))));
-            };
-            const addChain = async (type, payload) => {
-                const prev = s.chain.at(-1)?.hash || 'genesis';
-                const body = {type, payload, prev, ts: Date.now()};
-                const hash = await Crypto.sha(JSON.stringify(body));
-                const sig = await sign(hash);
-                s.chain.push({...body, hash, sig});
-                if (type !== 'init') s.tokens++;
-                save();
-            };
-            return {get: () => s, load, genKey, addChain, save};
-        })();
-
-        const elements = {
-            tokenBalance: document.getElementById('tokenBalance'),
-            chainHeight: document.getElementById('chainHeight'),
-            didDisplay: document.getElementById('didDisplay'),
-            identityDid: document.getElementById('identityDid'),
-            identityPub: document.getElementById('identityPub'),
-            statusText: document.getElementById('statusText'),
-            statusDot: document.getElementById('statusDot'),
-            title: document.getElementById('title'),
-            themeToggle: document.getElementById('themeToggle'),
-            chatLog: document.getElementById('chatLog'),
-            chatInput: document.getElementById('chatInput'),
-            forgeUserWins: document.getElementById('forgeUserWins'),
-            forgeAIWins: document.getElementById('forgeAIWins'),
-            forgeRound: document.getElementById('forgeRound'),
-            forgeInput: document.getElementById('forgeInput'),
-            forgeSubmit: document.getElementById('forgeSubmit'),
-            forgeStatus: document.getElementById('forgeStatus'),
-            forgeLog: document.getElementById('forgeLog'),
-            appCid: document.getElementById('appCid'),
-            resolveResult: document.getElementById('resolveResult')
-        };
-
-        async function ollamaChat(messages, onToken = () => {}) {
-            try {
-                const res = await fetch('http://localhost:11434/api/chat', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({model: 'llama3.1:8b', messages, stream: true})
-                });
-                const reader = res.body.getReader();
-                let out = '';
-                while (true) {
-                    const {value, done} = await reader.read();
-                    if (done) break;
-                    const lines = new TextDecoder().decode(value).trim().split('\n');
-                    for (const line of lines) {
-                        try {
-                            const j = JSON.parse(line);
-                            if (j.message?.content) {
-                                out += j.message.content;
-                                onToken(j.message.content);
-                            }
-                        } catch {}
-                    }
-                }
-                return out;
-            } catch {
-                return "Local intelligence offline. I still exist.";
-            }
-        }
-
-        function renderAll() {
-            const s = State.get();
-            elements.tokenBalance.textContent = `NXS: ${s.tokens}`;
-            elements.chainHeight.textContent = s.chain.length;
-            elements.didDisplay.textContent = s.did || 'generating...';
-            elements.identityDid.textContent = s.did || '';
-            elements.identityPub.textContent = s.pub || '';
-            elements.statusText.textContent = s.chain.length > 0 ? 'Growing' : 'Seed';
-            elements.statusDot.className = s.chain.length > 30 ? 'w-3 h-3 rounded-full bg-cyan shadow-glowMagenta animate-pulse' : 'w-3 h-3 rounded-full bg-cyan shadow-glow';
-            elements.chatLog.innerHTML = s.messages.map(m => `
-                <div class="p-4 rounded-xl ${m.role==='user'?'bg-cyan/15 border-cyan/30':'bg-magenta/15 border-magenta/30'} border">
-                  <strong class="${m.role==='user'?'text-cyan':'text-magenta'}">${m.role.toUpperCase()}</strong>
-                  <div class="mt-1 whitespace-pre-wrap">${m.text}</div>
-                </div>
-              `).join('');
-            elements.chatLog.scrollTop = elements.chatLog.scrollHeight;
-            const f = s.forgeStats;
-            elements.forgeUserWins.textContent = f.userWins;
-            elements.forgeAIWins.textContent = f.aiWins;
-            elements.forgeRound.textContent = f.round;
-            document.querySelectorAll('a.iam-link').forEach(a => {
-                if (s.did) a.href = a.href.replace('placeholder', s.did.split(':')[2]);
-            });
-        }
-
-        function logForge(code, role) {
-            const color = role === 'user' ? 'cyan' : 'magenta';
-            const prefix = role === 'user' ? 'YOU' : 'AI';
-            elements.forgeLog.innerHTML += `
-                <div class="p-4 rounded-xl border border-white/10 ${role==='user'?'bg-cyan/10':'bg-magenta/10'}">
-                  <div class="flex justify-between mb-2">
-                    <strong class="text-${color}">${prefix} PROPOSES — Round ${State.get().forgeStats.round}</strong>
-                  </div>
-                  <pre class="text-xs overflow-x-auto whitespace-pre-wrap">${code.trim()}</pre>
-                </div>`;
-            elements.forgeLog.scrollTop = elements.forgeLog.scrollHeight;
-        }
-
-        function scoreProposal(text) {
-            let score = text.length * 0.2;
-            score += (text.match(/ipfs|cid|manifest|did|sovereign|runtime|resolve|localStorage|crypto|immutable/gi) || []).length * 35;
-            score += text.includes('<script') || text.includes('(() =>') ? 70 : 0;
-            score += text.includes('State.addChain') ? 55 : 0;
-            score -= text.includes('eval') || text.includes('innerHTML=') || text.includes('document.write') || text.includes('Function(') ? 300 : 0;
-            score -= text.includes('fetch') && !text.includes('ollama') ? 150 : 0;
-            return Math.max(0, Math.floor(score));
-        }
-
-        document.querySelectorAll('.tab').forEach(btn => {
-            btn.onclick = () => {
-                document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
-                document.getElementById('view-' + btn.dataset.tab).classList.remove('hidden');
-                document.querySelectorAll('.tab').forEach(b => b.classList.remove('active', 'bg-cyan', 'text-black'));
-                btn.classList.add('active', 'bg-cyan', 'text-black');
-            };
-        });
-
-        elements.themeToggle.onclick = () => {
-            document.body.classList.toggle('alt');
-            elements.themeToggle.textContent = document.body.classList.contains('alt') ? 'CYAN' : 'MAGENTA';
-            elements.title.style.color = document.body.classList.contains('alt') ? '#ff3fd4' : '#3fffdc';
-            elements.statusDot.className = document.body.classList.contains('alt') ?
-                'w-3 h-3 rounded-full bg-magenta shadow-glowMagenta' :
-                'w-3 h-3 rounded-full bg-cyan shadow-glow';
-        };
-
-        elements.sendChat.onclick = async () => {
-            const text = elements.chatInput.value.trim();
-            if (!text) return;
-            elements.chatInput.value = '';
-            const s = State.get();
-            s.messages.push({role: 'user', text});
-            await State.addChain('chat:user', {text});
-            s.messages.push({role: 'ai', text: ''});
-            renderAll();
-            const reply = await ollamaChat(s.messages.slice(-20), token => {
-                s.messages.at(-1).text += token;
-                renderAll();
-            });
-            s.messages.at(-1).text = reply;
-            await State.addChain('chat:ai', {text: reply});
-            renderAll();
-        };
-
-        elements.forgeSubmit.onclick = async () => {
-            const proposal = elements.forgeInput.value.trim();
-            if (!proposal) return;
-            elements.forgeInput.value = '';
-            elements.forgeInput.disabled = elements.forgeSubmit.disabled = true;
-            elements.forgeStatus.textContent = 'Intelligence is counter-proposing...';
-            const s = State.get();
-            const stats = s.forgeStats;
-            await State.addChain('forge:user', {proposal});
-            logForge(proposal, 'user');
-            const userScore = scoreProposal(proposal);
-            const system = `You are evolving a sovereign, local-first, content-addressed runtime.
-Only respond with clean, complete <script> block or IIFE.
-Prioritize security, immutability, privacy, and cryptographic soundness.
-Never use eval, document.write, or unsafe dynamic code execution.
-User proposal:`;
-            let aiCode = await ollamaChat([
-                {role: 'system', content: system},
-                {role: 'user', content: proposal}
-            ]);
-            if (!aiCode.includes('<script') && !aiCode.includes('(() =>')) {
-                aiCode = `(() => {\n${aiCode}\n})();`;
-            }
-            await State.addChain('forge:ai', {code: aiCode});
-            logForge(aiCode, 'ai');
-            const aiScore = scoreProposal(aiCode);
-            let resultMsg, reward = 0;
-            if (userScore > aiScore + 40) {
-                reward = 12;
-                stats.userWins++;
-                resultMsg = `YOU WIN THE ROUND (+${reward} NXS)`;
-            } else if (aiScore > userScore + 40) {
-                stats.aiWins++;
-                resultMsg = 'AI DELIVERS SUPERIOR EVOLUTION';
-            } else {
-                reward = 5;
-                resultMsg = `TIGHT MATCH — Both rewarded (+${reward} NXS)`;
-            }
-            s.tokens += reward;
-            stats.round++;
-            await State.addChain('forge:result', {
-                round: stats.round - 1,
-                userScore,
-                aiScore,
-                winner: reward > 0 ? (reward === 12 ? 'user' : 'tie') : 'ai'
-            });
-            elements.forgeStatus.textContent = `Round ${stats.round-1} • You:${userScore} • AI:${aiScore} • ${resultMsg}`;
-            renderAll();
-            elements.forgeInput.disabled = elements.forgeSubmit.disabled = false;
-            setTimeout(() => elements.forgeStatus.textContent = '', 15000);
-        };
-
-        const IPFS_STATUS = {available: false, type: 'none', apiUrl: null};
-
-        async function detectLocalIPFS() {
-            try {
-                const res = await fetch('http://127.0.0.1:5001/api/v0/version', {cache: 'no-store'});
-                if (res.ok) {
-                    IPFS_STATUS.available = true;
-                    IPFS_STATUS.type = 'local-kubo';
-                    IPFS_STATUS.apiUrl = 'http://127.0.0.1:5001';
-                    return true;
-                }
-            } catch {}
-            return false;
-        }
-
-        async function simpleAddToIPFS(data) {
-            if (!IPFS_STATUS.available) throw new Error("No IPFS node detected");
-            const form = new FormData();
-            form.append('file', new Blob([data]), 'bundle');
-            const res = await fetch(IPFS_STATUS.apiUrl + '/api/v0/add?pin=true', {method: 'POST', body: form});
-            const json = await res.json();
-            return json.Hash;
-        }
-
-        elements.pinToIPFS.onclick = async () => {
-            if (!IPFS_STATUS.available) {
-                alert("No local Kubo node detected at 127.0.0.1:5001\n\nStart Kubo first for real pinning, or export ZIP for manual upload.");
-                return;
-            }
-            try {
-                const currentHtml = document.documentElement.outerHTML;
-                const bundle = `<!-- I-AM Decentralized Systems Manifest -->\n${JSON.stringify(MANIFEST, null, 2)}\n\n${LICENSE_TEXT}\n\n<!-- Runtime -->\n${currentHtml}`;
-                const cid = await simpleAddToIPFS(bundle);
-                elements.appCid.textContent = cid;
-                alert(`Pinned successfully!\n\nipfs://${cid}\niam://${State.get().did.split(':')[2]}/runtime`);
-            } catch (e) {
-                alert("Pin failed: " + e.message);
-            }
-        };
-
-        elements.exportForDeploy.onclick = () => {
-            const zip = new JSZip();
-            zip.file("index.html", document.documentElement.outerHTML);
-            zip.file("LICENSE.md", LICENSE_TEXT);
-            zip.file("README.txt", `I-AM Decentralized Systems\n\n${MANIFEST.description}\n\nVersion: ${MANIFEST.version}\nAuthor: ${MANIFEST.author}\nContact: ${MANIFEST.contact}\nLicense: Dual (see LICENSE.md)\nVision: ${MANIFEST.vision}`);
-            zip.generateAsync({type: "blob"}).then(blob => {
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(blob);
-                a.download = "i-am-decentralized-systems.zip";
-                a.click();
-            });
-        };
-
-        elements.resolveBtn.onclick = async () => {
-            const addr = document.getElementById('resolveInput').value.trim();
-            const out = elements.resolveResult;
-            out.textContent = `Resolving ${addr}...\n`;
-            let cid, path = '';
-            if (addr.startsWith('ipfs://')) {
-                const parts = addr.slice(7).split('/');
-                cid = parts[0];
-                path = parts.slice(1).join('/');
-            } else if (addr.startsWith('iam://')) {
-                out.textContent += "iam:// protocol only supports self-references in this version.\nForeign DID resolution not yet implemented.\n";
-                return;
-            } else {
-                out.textContent += "Unsupported scheme. Use ipfs:// or iam://\n";
-                return;
-            }
-            const gatewayUrl = `https://ipfs.io/ipfs/${cid}${path ? '/' + path : ''}`;
-            out.textContent += `Gateway URL: ${gatewayUrl}\nFetching...\n\n`;
-            try {
-                const res = await fetch(gatewayUrl);
-                if (!res.ok) throw new Error("Gateway returned " + res.status);
-                const text = await res.text();
-                out.textContent += text.slice(0, 3000) + (text.length > 3000 ? '\n\n... (truncated)' : '');
-            } catch (e) {
-                out.textContent += "Failed to fetch via public gateway: " + e.message + "\n";
-            }
-        };
-
-        (async function init() {
-            State.load();
-            if (!State.get().did) {
-                await State.genKey();
-                await State.addChain('init', {did: State.get().did});
-            }
-            await detectLocalIPFS();
-            renderAll();
-            const c = document.getElementById('starfield');
-            const ctx = c.getContext('2d');
-            let w, h, stars = [];
-            const resize = () => {
-                w = c.width = innerWidth;
-                h = c.height = innerHeight;
-            };
-            resize();
-            addEventListener('resize', resize);
-            for (let i = 0; i < 420; i++) stars.push({x: Math.random() * w, y: Math.random() * h, s: Math.random() * 1.8 + 0.4});
-            (function draw() {
-                ctx.fillStyle = 'rgba(5,6,10,0.35)';
-                ctx.fillRect(0, 0, w, h);
-                ctx.fillStyle = document.body.classList.contains('alt') ? '#ff3fd4' : '#3fffdc';
-                stars.forEach(s => {
-                    s.y += s.s * 0.4;
-                    if (s.y > h) s.y = 0;
-                    ctx.fillRect(s.x, s.y, s.s, s.s * 1.6);
-                });
-                requestAnimationFrame(draw);
-            })();
-            document.getElementById('exportIdentity').onclick = () => {
-                const blob = new Blob([JSON.stringify(State.get(), null, 2)], {type: 'application/json'});
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(blob);
-                a.download = `i-am-identity-${Date.now()}.json`;
-                a.click();
-            };
-            document.getElementById('clearAll').onclick = () => {
-                if (confirm("IRREVERSIBLE: Delete all local sovereign state?")) {
-                    localStorage.clear();
-                    location.reload();
-                }
-            };
-        })();
-    </script>
+    <!-- Main Application Script (ES Module) -->
+    <script type="module" src="js/main.js"></script>
 </body>
-
 </html>
